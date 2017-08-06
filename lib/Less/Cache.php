@@ -67,7 +67,7 @@ class Less_Cache
 
 
         //create a file for variables
-        if (!empty($modify_vars)) {
+        if (!empty($modify_vars) || !empty($parser_options)) {
             $lessvars = Less_Parser::serializeVars($modify_vars) . json_encode($parser_options);
             $vars_file = Less_Cache::$cache_dir . Less_Cache::$prefix_vars . sha1($lessvars) . '.less';
 
