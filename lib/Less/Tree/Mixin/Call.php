@@ -1,202 +1,190 @@
 <?php
 
 
-class Less_Tree_Mixin_Call extends Less_Tree{
+class Less_Tree_Mixin_Call extends Less_Tree
+{
+    public $selector;
+    public $arguments;
+    public $index;
+    public $currentFileInfo;
 
-	public $selector;
-	public $arguments;
-	public $index;
-	public $currentFileInfo;
+    public $important;
+    public $type = 'MixinCall';
 
-	public $important;
-	public $type = 'MixinCall';
+    /**
+     * less.js: tree.mixin.Call.
+     */
+    public function __construct($elements, $args, $index, $currentFileInfo, $important = false)
+    {
+        $this->selector = new Less_Tree_Selector($elements);
+        $this->arguments = $args;
+        $this->index = $index;
+        $this->currentFileInfo = $currentFileInfo;
+        $this->important = $important;
+    }
 
-	/**
-	 * less.js: tree.mixin.Call
-	 *
-	 */
-	public function __construct($elements, $args, $index, $currentFileInfo, $important = false){
-		$this->selector = new Less_Tree_Selector($elements);
-		$this->arguments = $args;
-		$this->index = $index;
-		$this->currentFileInfo = $currentFileInfo;
-		$this->important = $important;
-	}
+    //function accept($visitor){
+    //	$this->selector = $visitor->visit($this->selector);
+    //	$this->arguments = $visitor->visit($this->arguments);
+    //}
 
-	//function accept($visitor){
-	//	$this->selector = $visitor->visit($this->selector);
-	//	$this->arguments = $visitor->visit($this->arguments);
-	//}
+    public function compile($env)
+    {
+        $rules = [];
+        $match = false;
+        $isOneFound = false;
+        $candidates = [];
+        $defaultUsed = false;
+        $conditionResult = [];
 
+        $args = [];
+        foreach ($this->arguments as $a) {
+            $args[] = ['name'=> $a['name'], 'value' => $a['value']->compile($env)];
+        }
 
-	public function compile($env){
+        foreach ($env->frames as $frame) {
+            $mixins = $frame->find($this->selector);
 
-		$rules = array();
-		$match = false;
-		$isOneFound = false;
-		$candidates = array();
-		$defaultUsed = false;
-		$conditionResult = array();
+            if (!$mixins) {
+                continue;
+            }
 
-		$args = array();
-		foreach($this->arguments as $a){
-			$args[] = array('name'=> $a['name'], 'value' => $a['value']->compile($env) );
-		}
+            $isOneFound = true;
+            $defNone = 0;
+            $defTrue = 1;
+            $defFalse = 2;
 
-		foreach($env->frames as $frame){
+            // To make `default()` function independent of definition order we have two "subpasses" here.
+            // At first we evaluate each guard *twice* (with `default() == true` and `default() == false`),
+            // and build candidate list with corresponding flags. Then, when we know all possible matches,
+            // we make a final decision.
 
-			$mixins = $frame->find($this->selector);
+            $mixins_len = count($mixins);
+            for ($m = 0; $m < $mixins_len; $m++) {
+                $mixin = $mixins[$m];
 
-			if( !$mixins ){
-				continue;
-			}
+                if ($this->IsRecursive($env, $mixin)) {
+                    continue;
+                }
 
-			$isOneFound = true;
-			$defNone = 0;
-			$defTrue = 1;
-			$defFalse = 2;
+                if ($mixin->matchArgs($args, $env)) {
+                    $candidate = ['mixin' => $mixin, 'group' => $defNone];
 
-			// To make `default()` function independent of definition order we have two "subpasses" here.
-			// At first we evaluate each guard *twice* (with `default() == true` and `default() == false`),
-			// and build candidate list with corresponding flags. Then, when we know all possible matches,
-			// we make a final decision.
+                    if ($mixin instanceof Less_Tree_Ruleset) {
+                        for ($f = 0; $f < 2; $f++) {
+                            Less_Tree_DefaultFunc::value($f);
+                            $conditionResult[$f] = $mixin->matchCondition($args, $env);
+                        }
+                        if ($conditionResult[0] || $conditionResult[1]) {
+                            if ($conditionResult[0] != $conditionResult[1]) {
+                                $candidate['group'] = $conditionResult[1] ? $defTrue : $defFalse;
+                            }
 
-			$mixins_len = count($mixins);
-			for( $m = 0; $m < $mixins_len; $m++ ){
-				$mixin = $mixins[$m];
+                            $candidates[] = $candidate;
+                        }
+                    } else {
+                        $candidates[] = $candidate;
+                    }
 
-				if( $this->IsRecursive( $env, $mixin ) ){
-					continue;
-				}
+                    $match = true;
+                }
+            }
 
-				if( $mixin->matchArgs($args, $env) ){
+            Less_Tree_DefaultFunc::reset();
 
-					$candidate = array('mixin' => $mixin, 'group' => $defNone);
+            $count = [0, 0, 0];
+            for ($m = 0; $m < count($candidates); $m++) {
+                $count[$candidates[$m]['group']]++;
+            }
 
-					if( $mixin instanceof Less_Tree_Ruleset ){
+            if ($count[$defNone] > 0) {
+                $defaultResult = $defFalse;
+            } else {
+                $defaultResult = $defTrue;
+                if (($count[$defTrue] + $count[$defFalse]) > 1) {
+                    throw new Exception('Ambiguous use of `default()` found when matching for `'.$this->format($args).'`');
+                }
+            }
 
-						for( $f = 0; $f < 2; $f++ ){
-							Less_Tree_DefaultFunc::value($f);
-							$conditionResult[$f] = $mixin->matchCondition( $args, $env);
-						}
-						if( $conditionResult[0] || $conditionResult[1] ){
-							if( $conditionResult[0] != $conditionResult[1] ){
-								$candidate['group'] = $conditionResult[1] ? $defTrue : $defFalse;
-							}
+            $candidates_length = count($candidates);
+            $length_1 = ($candidates_length == 1);
 
-							$candidates[] = $candidate;
-						}
-					}else{
-						$candidates[] = $candidate;
-					}
+            for ($m = 0; $m < $candidates_length; $m++) {
+                $candidate = $candidates[$m]['group'];
+                if (($candidate === $defNone) || ($candidate === $defaultResult)) {
+                    try {
+                        $mixin = $candidates[$m]['mixin'];
+                        if (!($mixin instanceof Less_Tree_Mixin_Definition)) {
+                            $mixin = new Less_Tree_Mixin_Definition('', [], $mixin->rules, null, false);
+                            $mixin->originalRuleset = $mixins[$m]->originalRuleset;
+                        }
+                        $rules = array_merge($rules, $mixin->evalCall($env, $args, $this->important)->rules);
+                    } catch (Exception $e) {
+                        //throw new Less_Exception_Compiler($e->getMessage(), $e->index, null, $this->currentFileInfo['filename']);
+                        throw new Less_Exception_Compiler($e->getMessage(), null, null, $this->currentFileInfo);
+                    }
+                }
+            }
 
-					$match = true;
-				}
-			}
+            if ($match) {
+                if (!$this->currentFileInfo || !isset($this->currentFileInfo['reference']) || !$this->currentFileInfo['reference']) {
+                    Less_Tree::ReferencedArray($rules);
+                }
 
-			Less_Tree_DefaultFunc::reset();
+                return $rules;
+            }
+        }
 
+        if ($isOneFound) {
+            throw new Less_Exception_Compiler('No matching definition was found for `'.$this->Format($args).'`', null, $this->index, $this->currentFileInfo);
+        } else {
+            throw new Less_Exception_Compiler(trim($this->selector->toCSS()).' is undefined in '.$this->currentFileInfo['filename'], null, $this->index);
+        }
+    }
 
-			$count = array(0, 0, 0);
-			for( $m = 0; $m < count($candidates); $m++ ){
-				$count[ $candidates[$m]['group'] ]++;
-			}
+    /**
+     * Format the args for use in exception messages.
+     */
+    private function Format($args)
+    {
+        $message = [];
+        if ($args) {
+            foreach ($args as $a) {
+                $argValue = '';
+                if ($a['name']) {
+                    $argValue .= $a['name'].':';
+                }
+                if (is_object($a['value'])) {
+                    $argValue .= $a['value']->toCSS();
+                } else {
+                    $argValue .= '???';
+                }
+                $message[] = $argValue;
+            }
+        }
 
-			if( $count[$defNone] > 0 ){
-				$defaultResult = $defFalse;
-			} else {
-				$defaultResult = $defTrue;
-				if( ($count[$defTrue] + $count[$defFalse]) > 1 ){
-					throw new Exception( 'Ambiguous use of `default()` found when matching for `' . $this->format($args) . '`' );
-				}
-			}
+        return implode(', ', $message);
+    }
 
+    /**
+     * Are we in a recursive mixin call?
+     *
+     * @return bool
+     */
+    private function IsRecursive($env, $mixin)
+    {
+        foreach ($env->frames as $recur_frame) {
+            if (!($mixin instanceof Less_Tree_Mixin_Definition)) {
+                if ($mixin === $recur_frame) {
+                    return true;
+                }
 
-			$candidates_length = count($candidates);
-			$length_1 = ($candidates_length == 1);
+                if (isset($recur_frame->originalRuleset) && $mixin->ruleset_id === $recur_frame->originalRuleset) {
+                    return true;
+                }
+            }
+        }
 
-			for( $m = 0; $m < $candidates_length; $m++){
-				$candidate = $candidates[$m]['group'];
-				if( ($candidate === $defNone) || ($candidate === $defaultResult) ){
-					try{
-						$mixin = $candidates[$m]['mixin'];
-						if( !($mixin instanceof Less_Tree_Mixin_Definition) ){
-							$mixin = new Less_Tree_Mixin_Definition('', array(), $mixin->rules, null, false);
-							$mixin->originalRuleset = $mixins[$m]->originalRuleset;
-						}
-						$rules = array_merge($rules, $mixin->evalCall($env, $args, $this->important)->rules);
-					} catch (Exception $e) {
-						//throw new Less_Exception_Compiler($e->getMessage(), $e->index, null, $this->currentFileInfo['filename']);
-						throw new Less_Exception_Compiler($e->getMessage(), null, null, $this->currentFileInfo);
-					}
-				}
-			}
-
-			if( $match ){
-				if( !$this->currentFileInfo || !isset($this->currentFileInfo['reference']) || !$this->currentFileInfo['reference'] ){
-					Less_Tree::ReferencedArray($rules);
-				}
-
-				return $rules;
-			}
-		}
-
-		if( $isOneFound ){
-			throw new Less_Exception_Compiler('No matching definition was found for `'.$this->Format( $args ).'`', null, $this->index, $this->currentFileInfo);
-
-		}else{
-			throw new Less_Exception_Compiler(trim($this->selector->toCSS()) . " is undefined in ".$this->currentFileInfo['filename'], null, $this->index);
-		}
-
-	}
-
-	/**
-	 * Format the args for use in exception messages
-	 *
-	 */
-	private function Format($args){
-		$message = array();
-		if( $args ){
-			foreach($args as $a){
-				$argValue = '';
-				if( $a['name'] ){
-					$argValue .= $a['name'] . ':';
-				}
-				if( is_object($a['value']) ){
-					$argValue .= $a['value']->toCSS();
-				}else{
-					$argValue .= '???';
-				}
-				$message[] = $argValue;
-			}
-		}
-		return implode(', ',$message);
-	}
-
-
-	/**
-	 * Are we in a recursive mixin call?
-	 *
-	 * @return bool
-	 */
-	private function IsRecursive( $env, $mixin ){
-
-		foreach($env->frames as $recur_frame){
-			if( !($mixin instanceof Less_Tree_Mixin_Definition) ){
-
-				if( $mixin === $recur_frame ){
-					return true;
-				}
-
-				if( isset($recur_frame->originalRuleset) && $mixin->ruleset_id === $recur_frame->originalRuleset ){
-					return true;
-				}
-			}
-		}
-
-		return false;
-	}
-
+        return false;
+    }
 }
-
-
