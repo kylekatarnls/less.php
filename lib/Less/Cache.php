@@ -68,8 +68,8 @@ class Less_Cache
 
         //create a file for variables
         if (!empty($modify_vars) || !empty($parser_options)) {
-            $lessvars = Less_Parser::serializeVars($modify_vars) . json_encode($parser_options);
-            $vars_file = Less_Cache::$cache_dir . Less_Cache::$prefix_vars . sha1($lessvars) . '.less';
+            $lessvars = Less_Parser::serializeVars($modify_vars);
+            $vars_file = Less_Cache::$cache_dir . Less_Cache::$prefix_vars . sha1($lessvars . json_encode($parser_options)) . '.less';
 
             if (!file_exists($vars_file)) {
                 file_put_contents($vars_file, $lessvars);
@@ -80,7 +80,7 @@ class Less_Cache
 
 
         // generate name for compiled css file
-        $hash = md5(json_encode($less_files));
+        $hash = md5(json_encode($less_files) . json_encode($parser_options));
         $list_file = Less_Cache::$cache_dir . Less_Cache::$prefix . $hash . '.list';
 
         // check cached content
