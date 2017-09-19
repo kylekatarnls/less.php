@@ -15,14 +15,14 @@ class Less_Output_Mapped extends Less_Output
     /**
      * Current line.
      *
-     * @var integer
+     * @var int
      */
     protected $lineNumber = 0;
 
     /**
      * Current column.
      *
-     * @var integer
+     * @var int
      */
     protected $column = 0;
 

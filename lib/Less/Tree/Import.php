@@ -47,13 +47,13 @@ class Less_Tree_Import extends Less_Tree
     }
 
 //
-// The actual import node doesn't return anything, when converted to CSS.
-// The reason is that it's used at the evaluation stage, so that the rules
-// it imports can be treated like any other rules.
+    // The actual import node doesn't return anything, when converted to CSS.
+    // The reason is that it's used at the evaluation stage, so that the rules
+    // it imports can be treated like any other rules.
 //
-// In `eval`, we make sure all Import nodes get evaluated, recursively, so
-// we end up with a flat structure, which can easily be imported in the parent
-// ruleset.
+    // In `eval`, we make sure all Import nodes get evaluated, recursively, so
+    // we end up with a flat structure, which can easily be imported in the parent
+    // ruleset.
 //
 
     public function accept($visitor)

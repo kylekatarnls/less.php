@@ -341,7 +341,7 @@ class Less_SourceMap_Generator extends Less_Configurable
      *
      * @param string $filename
      *
-     * @return integer|false
+     * @return int|false
      */
     protected function findFileIndex($filename)
     {

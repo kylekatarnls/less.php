@@ -554,6 +554,7 @@ class Less_Parser
             if (mkdir($dir)) {
                 return true;
             }
+
             throw new Less_Exception_Parser('Less.php cache directory couldn\'t be created: ' . $dir);
         } elseif (!is_dir($dir)) {
             throw new Less_Exception_Parser('Less.php cache directory doesn\'t exist: ' . $dir);

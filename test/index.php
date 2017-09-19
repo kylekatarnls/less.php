@@ -231,6 +231,7 @@ class ParserTest
         */
 
         $compiled = '';
+
         try {
 
             /**
@@ -282,7 +283,7 @@ class ParserTest
 
             return $matched;
 
-        //css comparison
+            //css comparison
         } else {
 
             //$this->SaveExpected($file_expected, $compiled);

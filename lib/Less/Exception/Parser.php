@@ -15,7 +15,7 @@ class Less_Exception_Parser extends Exception
     /**
      * The current parser index.
      *
-     * @var integer
+     * @var int
      */
     public $index;
 
@@ -87,7 +87,7 @@ class Less_Exception_Parser extends Exception
     /**
      * Returns the line number the error was encountered.
      *
-     * @return integer
+     * @return int
      */
     public function getLineNumber()
     {
@@ -106,7 +106,7 @@ class Less_Exception_Parser extends Exception
     /**
      * Returns the column the error was encountered.
      *
-     * @return integer
+     * @return int
      */
     public function getColumn()
     {
