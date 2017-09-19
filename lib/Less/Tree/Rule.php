@@ -41,11 +41,13 @@ class Less_Tree_Rule extends Less_Tree
     public function genCSS($output)
     {
         $output->add($this->name . Less_Environment::$_outputMap[': '], $this->currentFileInfo, $this->index);
+
         try {
             $this->value->genCSS($output);
         } catch (Less_Exception_Parser $e) {
             $e->index = $this->index;
             $e->currentFile = $this->currentFileInfo;
+
             throw $e;
         }
         $output->add($this->important . (($this->inline || (Less_Environment::$lastRule && Less_Parser::$options['compress'])) ? '' : ';'), $this->currentFileInfo, $this->index);
@@ -88,6 +90,7 @@ class Less_Tree_Rule extends Less_Tree
                 $e->index = $this->index;
                 $e->currentFile = $this->currentFileInfo;
             }
+
             throw $e;
         }
 
