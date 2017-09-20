@@ -235,7 +235,7 @@ class Less_Tree_Ruleset extends Less_Tree
             $rule = $this->rules[$i];
 
             if ($rule instanceof Less_Tree_Rule) {
-                $env->frames[] = new Less_Tree_Ruleset(array(), array($rule));
+                $env->frames[] = new self(array(), array($rule));
             }
 
             if ($rule instanceof Less_Tree_Import) {
