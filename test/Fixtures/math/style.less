@@ -1,0 +1,11 @@
+@emSize: 1.3;
+@miniSize: 13;
+@tinySize: 14;
+
+@mini            : unit( round(@miniSize * @emSize) / @emSize, rem);
+@tiny            : unit( round(@tinySize * @emSize) / @emSize, rem);
+
+#foo {
+  font-size: @mini;
+  line-height: @tiny;
+}
