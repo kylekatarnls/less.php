@@ -17,7 +17,7 @@ class phpunit_SyntaxTest extends phpunit_bootstrap
             'body {',
             '  color: #ff0000;',
             '}',
-            ''
+            '',
         )), $css);
     }
 
